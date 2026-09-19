@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Health Metrics</title>
+  <style>
+    /* ---------- palette: same values as the Python version ---------- */
+    :root {
+      --bg: #0f1117;
+      --card: #181b24;
+      --field: #232735;
+      --text: #e6e8ef;
+      --muted: #8b91a5;
+      --accent: #7c9cff;
+      --underweight: #5cc8ff;
+      --normal: #4ade80;
+      --overweight: #fbbf24;
+      --obese: #f87171;
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.45;
+    }
+
+    main {
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 32px 20px 48px;
+    }
+
+    h1 { margin: 0; font-size: 1.6rem; font-weight: 700; }
+    .subtitle { margin: 2px 0 20px; color: var(--muted); font-size: 0.9rem; }
+
+    .card {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .card + .card { margin-top: 14px; }
+
+    /* ---------- form ---------- */
+    label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin: 12px 0 4px;
+    }
+    label:first-child { margin-top: 0; }
+
+    input, select {
+      width: 100%;
+      font: inherit;
+      font-size: 1rem;
+      color: var(--text);
+      background: var(--field);
+      border: 1px solid var(--field);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+    /* hide the number spinners; they're fiddly on a dark theme */
+    input[type=number] { -moz-appearance: textfield; }
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .error {
+      min-height: 1.2em;
+      margin-top: 10px;
+      color: var(--obese);
+      font-size: 0.8rem;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 14px;
+      padding: 12px;
+      font: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #0b0d14;
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover, button:focus-visible { background: #9ab3ff; outline: none; }
+
+    /* ---------- results ---------- */
+    .heading { margin: 0; color: var(--muted); font-size: 1rem; font-weight: 700; }
+    .heading.ready { color: var(--text); }
+
+    .bmi-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      margin: 12px 0 6px;
+    }
+    .bmi-value { font-size: 2.6rem; font-weight: 700; line-height: 1; color: var(--muted); }
+    .badge {
+      padding: 3px 10px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      background: var(--field);
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    /* the gauge is a bar 0–40 with a filled portion up to the BMI */
+    .gauge {
+      height: 10px;
+      background: var(--field);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .gauge-fill {
+      height: 100%;
+      width: 0;
+      background: var(--accent);
+      transition: width 0.4s ease;
+    }
+    @media (prefers-reduced-motion: reduce) { .gauge-fill { transition: none; } }
+    .scale {
+      display: flex;
+      justify-content: space-between;
+      margin: 2px 0 12px;
+      color: var(--muted);
+      font-size: 0.7rem;
+    }
+
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 0.9rem;
+    }
+    .stat span:first-child { color: var(--muted); }
+    .stat span:last-child { font-weight: 700; }
+
+    .note { margin: 12px 0 0; color: var(--muted); font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Health Metrics</h1>
+    <p class="subtitle">BMI · BMR · daily water target</p>
+
+    <!-- ---------- input card ---------- -->
+    <div class="card">
+      <label for="name">Name</label>
+      <input id="name" type="text" autocomplete="off">
+
+      <label for="weight">Weight (kg)</label>
+      <input id="weight" type="number" inputmode="decimal" step="0.1" min="20" max="400">
+
+      <label for="height">Height (m)</label>
+      <input id="height" type="number" inputmode="decimal" step="0.01" min="0.5" max="2.6" placeholder="e.g. 1.75">
+
+      <label for="age">Age (years)</label>
+      <input id="age" type="number" inputmode="numeric" min="1" max="120">
+
+      <label for="sex">Sex</label>
+      <select id="sex">
+        <option>Male</option>
+        <option>Female</option>
+      </select>
+
+      <p id="error" class="error"></p>
+      <button id="calculate" type="button">Calculate</button>
+    </div>
+
+    <!-- ---------- results card ---------- -->
+    <div class="card">
+      <p id="heading" class="heading">Your report</p>
+      <div class="bmi-row">
+        <span id="bmi" class="bmi-value">--</span>
+        <span id="badge" class="badge">BMI</span>
+      </div>
+      <div class="gauge" role="meter" aria-labelledby="badge" aria-valuemin="0" aria-valuemax="40">
+        <div id="gauge-fill" class="gauge-fill"></div>
+      </div>
+      <div class="scale"><span>0</span><span>18.5</span><span>25</span><span>30</span><span>40</span></div>
+
+      <div class="stat"><span>Estimated BMR</span><span id="bmr">--</span></div>
+      <div class="stat"><span>Water target</span><span id="water">--</span></div>
+    </div>
+
+    <p class="note">Estimates from standard formulas, not medical advice.</p>
+  </main>
+
+  <script>
+    // ---------- calculations: same logic as the Python version ----------
+    function bmiCategory(bmi) {
+      if (bmi < 18.5) return "underweight";
+      if (bmi < 25)   return "normal";
+      if (bmi < 30)   return "overweight";
+      return "obese";
+    }
+
+    function compute(weight, height, age, sex) {
+      const bmi = weight / height ** 2;
+      let bmr = 10 * weight + 6.25 * (height * 100) - 5 * age;   // Mifflin-St Jeor
+      bmr += sex === "Male" ? 5 : -161;
+      const water = weight * 0.033;
+      return { bmi, bmr, water };
+    }
+
+    // ---------- wiring ----------
+    const $ = id => document.getElementById(id);   // tiny shortcut
+
+    function calculate() {
+      const name = $("name").value.trim() || "You";
+      const weight = parseFloat($("weight").value);
+      let height = parseFloat($("height").value);
+      const age = parseInt($("age").value, 10);
+      const sex = $("sex").value;
+      const error = $("error");
+
+      if ([weight, height, age].some(Number.isNaN)) {
+        error.textContent = "Please enter numbers for weight, height and age.";
+        return;
+      }
+      if (height > 3) height = height / 100;      // someone typed 175 instead of 1.75
+      if (!(weight >= 20 && weight <= 400 && height >= 0.5 && height <= 2.6 && age >= 1 && age <= 120)) {
+        error.textContent = "Please check the values: weight 20–400 kg, height 0.5–2.6 m, age 1–120.";
+        return;
+      }
+      error.textContent = "";
+
+      const { bmi, bmr, water } = compute(weight, height, age, sex);
+      const category = bmiCategory(bmi);
+      const color = getComputedStyle(document.documentElement).getPropertyValue(`--${category}`).trim();
+
+      // Capitalise the first letter of each word in the name
+      const pretty = name.replace(/\b\w/g, c => c.toUpperCase());
+
+      $("heading").textContent = `Report for ${pretty}`;
+      $("heading").classList.add("ready");
+      $("bmi").textContent = bmi.toFixed(1);
+      $("bmi").style.color = color;
+      $("badge").textContent = category.toUpperCase();
+      $("badge").style.background = color;
+      $("badge").style.color = "#0b0d14";
+      $("gauge-fill").style.background = color;
+      $("gauge-fill").style.width = `${Math.min(bmi, 40) / 40 * 100}%`;
+      document.querySelector(".gauge").setAttribute("aria-valuenow", bmi.toFixed(1));
+      $("bmr").textContent = `${Math.round(bmr)} kcal/day`;
+      $("water").textContent = `${water.toFixed(1)} L/day`;
+    }
+
+    $("calculate").addEventListener("click", calculate);
+    // Enter key anywhere in the form also calculates, like the desktop app
+    document.querySelector("main").addEventListener("keydown", e => {
+      if (e.key === "Enter") calculate();
+    });
+  </script>
+</body>
+</html>

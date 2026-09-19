@@ -6,7 +6,8 @@ It comes in two versions with identical logic and the same dark palette:
 
 - `health_gui.py` — a desktop app built with tkinter (Python 3, no
   extra packages)
-- `index.html` — a web page in plain HTML, CSS and JavaScript
+- `index.html` — a web page in plain HTML, CSS and JavaScript.
+  Live at https://ktwyw.github.io/health-metrics/
 
 ## Run the desktop version
 
@@ -19,7 +20,7 @@ it's a separate package, e.g. `sudo apt install python3-tk`.
 
 ## Run the web version
 
-Open `index.html` in a browser, or enable GitHub Pages on this repo to host it.
+Open `index.html` in a browser, or use the live link above.
 
 ## How the numbers are calculated
 
